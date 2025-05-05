@@ -1,6 +1,9 @@
+#include <omp.h>
 #include <array>
 #include <iostream>
 #include <bitset>
+#include <cmath>
+#include <functional>
 #define MAX_CLIENTS 100000
 #define MAX_INGREDIENTS 10000
 #define NMAX 99999999
@@ -77,19 +80,51 @@ private:
         return updated_state;
     }
 
+    std::vector<SimulationState> get_states_at_depth(int depth)
+    {
+        // There are 2^(depth - 1) nodes(states)
+        std::vector<SimulationState> states;
+        states.reserve((size_t)pow(2, depth - 1));
+
+        std::function<void(SimulationState)> simulate_to_depth = [&](SimulationState simulation_state)
+        {
+            if (simulation_state.depth == depth)
+            {
+                states.push_back(simulation_state);
+            }
+            else
+            {
+                simulate_to_depth(update_for_ingr_addition(simulation_state, depth));
+                simulate_to_depth(update_for_ingr_removal(simulation_state, depth));
+            }
+        };
+        simulate_to_depth(SimulationState());
+        return states;
+    }
+
     void simulate(SimulationState simulation_state, int ingredient_index)
     {
         if (ingredient_index == data.ingredients.size())
         {
-            if (simulation_state.clients_lost < best_simulation_state.clients_lost)
+            #pragma omp critical
             {
-                best_simulation_state = simulation_state;
+                if (simulation_state.clients_lost < best_simulation_state.clients_lost)
+                    best_simulation_state = simulation_state;
             }
             return;
         }
 
-        const double ingr_appreciation = (double)data.ingr_to_fans.size() / (double)data.ingr_to_haters.size();
-        if (ingr_appreciation > 0)
+        bool prune = false;
+        #pragma omp critical
+        {
+            // Prune branch if already worse than the best solution found so far
+            if (simulation_state.clients_lost >= best_simulation_state.clients_lost)
+                prune = true;
+        }
+        if (prune)
+            return;
+
+        if (data.ingr_to_fans.size() > data.ingr_to_haters.size())
         {
             simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
             simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
@@ -108,9 +143,17 @@ public:
 
     std::vector<std::string> solve()
     {
-        simulate(SimulationState(), 0);
-        std::cout << "Score = " << data.nr_clients - best_simulation_state.clients_lost << "\n\n";
+        const int starting_depth = 4;
+        auto starting_states = get_states_at_depth(starting_depth);
 
+        omp_set_num_threads((int)starting_states.size());
+        #pragma omp parallel for
+        for (int th_index = 0; th_index < starting_states.size(); ++th_index)
+        {
+            simulate(starting_states[th_index], starting_depth);
+        }
+
+        std::cout << "Score = " << data.nr_clients - best_simulation_state.clients_lost << "\n\n";
         std::vector<std::string> result;
 
         for (int ingredient_index = 0; ingredient_index < data.ingredients.size(); ++ingredient_index)
