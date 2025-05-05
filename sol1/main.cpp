@@ -2,6 +2,7 @@
 #include <array>
 #include <iostream>
 #include <bitset>
+#include <chrono>
 #include <cmath>
 #include <functional>
 #define MAX_CLIENTS 100000
@@ -13,13 +14,46 @@
 struct SimulationState
 {
     int depth, clients_lost;
-    std::bitset<MAX_CLIENTS> is_client_remaining;
-    std::bitset<MAX_INGREDIENTS> is_ingredient_chosen;
+    std::bitset<MAX_CLIENTS>* is_client_remaining;
+    std::bitset<MAX_INGREDIENTS>* is_ingredient_chosen;
 
     SimulationState(): depth(0), clients_lost(0)
     {
-        is_client_remaining.set();
-        is_ingredient_chosen.reset();
+        is_client_remaining = new std::bitset<MAX_CLIENTS>();
+        is_ingredient_chosen = new std::bitset<MAX_INGREDIENTS>();
+
+        (*is_client_remaining).set();
+        (*is_ingredient_chosen).reset();
+    }
+
+    SimulationState(const SimulationState& other)
+    {
+        depth = other.depth;
+        clients_lost = other.clients_lost;
+
+        is_client_remaining = new std::bitset<MAX_CLIENTS>();
+        is_ingredient_chosen = new std::bitset<MAX_INGREDIENTS>();
+
+        *is_client_remaining = *(other.is_client_remaining);
+        *is_ingredient_chosen = *(other.is_ingredient_chosen);
+    }
+
+    SimulationState& operator=(const SimulationState& other)
+    {
+        if (this != &other) {
+            depth = other.depth;
+            clients_lost = other.clients_lost;
+
+            *is_client_remaining = *(other.is_client_remaining);
+            *is_ingredient_chosen = *(other.is_ingredient_chosen);
+        }
+        return *this;
+    }
+
+    ~SimulationState()
+    {
+        delete is_client_remaining;
+        delete is_ingredient_chosen;
     }
 };
 
@@ -28,12 +62,13 @@ class Solver
 private:
     const Data& data;
     SimulationState best_simulation_state;
+    const std::chrono::steady_clock::time_point start;
 
     SimulationState update_for_ingr_addition(const SimulationState& simulation_state, int ingredient_index)
     {
         SimulationState updated_state = simulation_state;
         updated_state.depth++;
-        updated_state.is_ingredient_chosen[ingredient_index] = true;
+        (*updated_state.is_ingredient_chosen)[ingredient_index] = true;
 
         const auto& ingredient = data.ingredients[ingredient_index];
         const auto clients_it = data.ingr_to_haters.find(ingredient);
@@ -45,9 +80,9 @@ private:
         // All clients who dislike this ingredient are lost
         for (int client_index : clients_it->second)
         {
-            if (updated_state.is_client_remaining[client_index])
+            if ((*updated_state.is_client_remaining)[client_index])
             {
-                updated_state.is_client_remaining[client_index] = false;
+                (*updated_state.is_client_remaining)[client_index] = false;
                 updated_state.clients_lost++;
             }
         }
@@ -70,14 +105,21 @@ private:
         // All clients who like this ingredient are lost
         for (int client_index : clients_it->second)
         {
-            if (updated_state.is_client_remaining[client_index])
+            if ((*updated_state.is_client_remaining)[client_index])
             {
-                updated_state.is_client_remaining[client_index] = false;
+                (*updated_state.is_client_remaining)[client_index] = false;
                 updated_state.clients_lost++;
             }
         }
 
         return updated_state;
+    }
+
+    bool is_timer_expired()
+    {
+        const auto now = std::chrono::steady_clock::now();
+        auto elapsed = duration_cast<std::chrono::minutes>(now - start);
+        return elapsed.count() >= 1;
     }
 
     std::vector<SimulationState> get_states_at_depth(int depth)
@@ -109,7 +151,10 @@ private:
             #pragma omp critical
             {
                 if (simulation_state.clients_lost < best_simulation_state.clients_lost)
+                {
                     best_simulation_state = simulation_state;
+                    std::cout << "New best state has " << best_simulation_state.clients_lost << " clients lost\n";
+                }
             }
             return;
         }
@@ -120,13 +165,21 @@ private:
             // Prune branch if already worse than the best solution found so far
             if (simulation_state.clients_lost >= best_simulation_state.clients_lost)
                 prune = true;
+            if (is_timer_expired()) {
+                prune = true;
+                std::cout << "Timer expired\n";
+            }
         }
         if (prune)
+        {
+//            std::cout << "PRUNING\n";
             return;
+        }
 
         if (data.ingr_to_fans.size() > data.ingr_to_haters.size())
         {
-            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
+            const auto new_state = update_for_ingr_addition(simulation_state, ingredient_index);
+            simulate(new_state, ingredient_index + 1);
             simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
         }
         else
@@ -136,15 +189,18 @@ private:
         }
     }
 public:
-    explicit Solver(const Data& data): data(data)
+    explicit Solver(const Data& data)
+        :data(data),
+        start(std::chrono::steady_clock::now())
     {
         best_simulation_state.clients_lost = NMAX;
     }
 
     std::vector<std::string> solve()
     {
-        const int starting_depth = 4;
+        const int starting_depth = 2;
         auto starting_states = get_states_at_depth(starting_depth);
+        std::cout << starting_states.size() << std::endl;
 
         omp_set_num_threads((int)starting_states.size());
         #pragma omp parallel for
@@ -157,7 +213,7 @@ public:
         std::vector<std::string> result;
 
         for (int ingredient_index = 0; ingredient_index < data.ingredients.size(); ++ingredient_index)
-            if (best_simulation_state.is_ingredient_chosen[ingredient_index])
+            if ((*best_simulation_state.is_ingredient_chosen)[ingredient_index])
                 result.push_back(data.ingredients[ingredient_index]);
         return result;
     }
@@ -173,17 +229,17 @@ int main()
 
     for (const auto& input_file : input_files)
     {
+        if (input_file != "d_difficult.in")
+            continue;
+
         Data data(in_prefix + input_file);
-        std::cout << "Successfully read " << data.ingredients.size() << " unique ingredients.\n";
+        std::cout << "Successfully read " << data.ingredients.size() << " unique ingredients and " << data.nr_clients << " clients .\n";
 
         Solver solver(data);
         auto result = solver.solve();
 
         const auto out_filename = out_prefix + input_file.substr(0, (input_file.find('.'))) + ".out";
         Data::write_to_file(out_filename, result);
-
-        if (input_file == "c_coarse.in")
-            break;
     }
     return 0;
 }
