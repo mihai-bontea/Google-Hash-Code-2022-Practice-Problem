@@ -1,13 +1,11 @@
-#include <omp.h>
 #include <array>
-#include <iostream>
+#include <cmath>
 #include <bitset>
 #include <chrono>
-#include <cmath>
+#include <iostream>
 #include <functional>
-#define MAX_CLIENTS 100000
-#define MAX_INGREDIENTS 10000
-#define NMAX 99999999
+
+#include <omp.h>
 
 #include "Data.h"
 
@@ -119,25 +117,25 @@ private:
     {
         const auto now = std::chrono::steady_clock::now();
         auto elapsed = duration_cast<std::chrono::minutes>(now - start);
-        return elapsed.count() >= 1;
+        return elapsed.count() >= 30;
     }
 
-    std::vector<SimulationState> get_states_at_depth(int depth)
+    std::vector<SimulationState> get_states_at_depth(const int max_depth)
     {
         // There are 2^(depth - 1) nodes(states)
         std::vector<SimulationState> states;
-        states.reserve((size_t)pow(2, depth - 1));
+        states.reserve((size_t)pow(2, max_depth - 1));
 
         std::function<void(SimulationState)> simulate_to_depth = [&](SimulationState simulation_state)
         {
-            if (simulation_state.depth == depth)
+            if (simulation_state.depth == max_depth)
             {
                 states.push_back(simulation_state);
             }
             else
             {
-                simulate_to_depth(update_for_ingr_addition(simulation_state, depth));
-                simulate_to_depth(update_for_ingr_removal(simulation_state, depth));
+                simulate_to_depth(update_for_ingr_addition(simulation_state, simulation_state.depth));
+                simulate_to_depth(update_for_ingr_removal(simulation_state, simulation_state.depth));
             }
         };
         simulate_to_depth(SimulationState());
@@ -165,23 +163,27 @@ private:
             // Prune branch if already worse than the best solution found so far
             if (simulation_state.clients_lost >= best_simulation_state.clients_lost)
                 prune = true;
-            if (is_timer_expired()) {
-                prune = true;
-                std::cout << "Timer expired\n";
-            }
         }
-        if (prune)
-        {
-//            std::cout << "PRUNING\n";
+        if (prune || is_timer_expired())
             return;
-        }
 
-        if (data.ingr_to_fans.size() > data.ingr_to_haters.size())
+        const auto& ingredient = data.ingredients[ingredient_index];
+        const auto ingr_fans_it = data.ingr_to_fans.find(ingredient);
+        const auto ingr_haters_it = data.ingr_to_haters.find(ingredient);
+
+        // No one dislikes this ingredient, no point checking for its removal
+        if (ingr_haters_it == data.ingr_to_haters.end())
+            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
+        // No one likes this ingredient, no point checking for its addition
+        else if (ingr_fans_it == data.ingr_to_fans.end())
+            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
+        // More people like this ingredient than dislike it, prioritize checking its addition
+        else if (ingr_fans_it->second.size() > ingr_haters_it->second.size())
         {
-            const auto new_state = update_for_ingr_addition(simulation_state, ingredient_index);
-            simulate(new_state, ingredient_index + 1);
+            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
             simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
         }
+        // More people dislike this ingredient than ike it, prioritize checking its removal
         else
         {
             simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
@@ -198,9 +200,8 @@ public:
 
     std::vector<std::string> solve()
     {
-        const int starting_depth = 2;
+        const int starting_depth = 3;
         auto starting_states = get_states_at_depth(starting_depth);
-        std::cout << starting_states.size() << std::endl;
 
         omp_set_num_threads((int)starting_states.size());
         #pragma omp parallel for
@@ -208,6 +209,7 @@ public:
         {
             simulate(starting_states[th_index], starting_depth);
         }
+        simulate(starting_states[0], starting_depth);
 
         std::cout << "Score = " << data.nr_clients - best_simulation_state.clients_lost << "\n\n";
         std::vector<std::string> result;
@@ -217,7 +219,6 @@ public:
                 result.push_back(data.ingredients[ingredient_index]);
         return result;
     }
-
 };
 
 int main()
@@ -229,9 +230,6 @@ int main()
 
     for (const auto& input_file : input_files)
     {
-        if (input_file != "d_difficult.in")
-            continue;
-
         Data data(in_prefix + input_file);
         std::cout << "Successfully read " << data.ingredients.size() << " unique ingredients and " << data.nr_clients << " clients .\n";
 

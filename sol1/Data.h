@@ -1,7 +1,11 @@
 #pragma once
-#include <fstream>
 #include <vector>
+#include <fstream>
 #include <unordered_map>
+
+#define NMAX 99999999
+#define MAX_CLIENTS 100000
+#define MAX_INGREDIENTS 10000
 
 struct Data
 {
