@@ -20,7 +20,7 @@ The problem is framed as a **binary decision tree**: at each depth *i* in the tr
 
 * if the best solution found so far has fewer clients lost than the current state, this path will be abandoned
 
-The operation of evaluating paths in the decision tree is a great candidate for parallel processing. 8 threads are started from depth 4 in the tree, and they update a shared variable **best_simulation_state**. The simulation state of a node is mainly defined by two bitsets, *is_client_remaining* and *is_ingredient_chosen* which provide a memory efficient way to keep track of previous choices.
+The operation of evaluating paths in the decision tree is a great candidate for parallel processing. 8 threads are started from depth 4 in the tree, and they update a shared variable **best_simulation_state**. The simulation state of a node is mainly defined by two **bitsets**, *is_client_remaining* and *is_ingredient_chosen* which provide a memory efficient way to keep track of previous choices.
 
 The recursion depth is too much for Windows' default stack size of 1 MB, so increasing it with the help of compiler flags is used.
 
