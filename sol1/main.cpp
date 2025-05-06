@@ -184,8 +184,8 @@ private:
     }
 public:
     explicit Solver(const Data& data)
-        :data(data),
-        start(std::chrono::steady_clock::now())
+        : data(data)
+        , start(std::chrono::steady_clock::now())
     {
         best_simulation_state.clients_lost = NMAX;
     }
@@ -193,7 +193,7 @@ public:
     std::vector<std::string> solve()
     {
         const int starting_depth = 3;
-        auto starting_states = get_states_at_depth(starting_depth);
+        const auto starting_states = get_states_at_depth(starting_depth);
 
         omp_set_num_threads((int)starting_states.size());
         #pragma omp parallel for
@@ -201,7 +201,6 @@ public:
         {
             simulate(starting_states[th_index], starting_depth);
         }
-        simulate(starting_states[0], starting_depth);
 
         std::cout << "Score = " << data.nr_clients - best_simulation_state.clients_lost << "\n\n";
         std::vector<std::string> result;
