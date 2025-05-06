@@ -225,7 +225,7 @@ int main()
         std::cout << "Successfully read " << data.ingredients.size() << " unique ingredients and " << data.nr_clients << " clients .\n";
 
         Solver solver(data);
-        auto result = solver.solve();
+        const auto result = solver.solve();
 
         const auto out_filename = out_prefix + input_file.substr(0, (input_file.find('.'))) + ".out";
         Data::write_to_file(out_filename, result);
