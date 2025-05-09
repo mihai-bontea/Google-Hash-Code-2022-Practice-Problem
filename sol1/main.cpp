@@ -134,8 +134,9 @@ private:
         return states;
     }
 
-    void simulate(SimulationState simulation_state, int ingredient_index)
+    void simulate(SimulationState simulation_state, int ingredient_index, int local_clients_lost)
     {
+        // Solution reached
         if (ingredient_index == data.ingredients.size())
         {
             #pragma omp critical
@@ -150,12 +151,20 @@ private:
         }
 
         bool prune = false;
-        #pragma omp critical
+        // Prune branch if already worse than the last synced best solution found so far
+        if (simulation_state.clients_lost >= local_clients_lost)
+            prune = true;
+        else
         {
-            // Prune branch if already worse than the best solution found so far
-            if (simulation_state.clients_lost >= best_simulation_state.clients_lost)
+            // Check the updated best solution found so far
+            #pragma omp critical
+            {
+                local_clients_lost = best_simulation_state.clients_lost;
+            }
+            if (simulation_state.clients_lost >= local_clients_lost)
                 prune = true;
         }
+
         if (prune || is_timer_expired())
             return;
 
@@ -165,21 +174,21 @@ private:
 
         // No one dislikes this ingredient, no point checking for its removal
         if (ingr_haters_it == data.ingr_to_haters.end())
-            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
+            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
         // No one likes this ingredient, no point checking for its addition
         else if (ingr_fans_it == data.ingr_to_fans.end())
-            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
+            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
         // More people like this ingredient than dislike it, prioritize checking its addition
         else if (ingr_fans_it->second.size() > ingr_haters_it->second.size())
         {
-            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
-            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
+            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
+            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
         }
         // More people dislike this ingredient than ike it, prioritize checking its removal
         else
         {
-            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1);
-            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1);
+            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
+            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
         }
     }
 public:
@@ -199,7 +208,7 @@ public:
         #pragma omp parallel for
         for (int th_index = 0; th_index < starting_states.size(); ++th_index)
         {
-            simulate(starting_states[th_index], starting_depth);
+            simulate(starting_states[th_index], starting_depth, NMAX);
         }
 
         std::cout << "Score = " << data.nr_clients - best_simulation_state.clients_lost << "\n\n";
