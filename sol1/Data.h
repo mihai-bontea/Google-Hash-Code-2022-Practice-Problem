@@ -11,7 +11,7 @@ struct Data
 {
     int nr_clients;
     std::unordered_map<std::string, std::vector<int>> ingr_to_fans, ingr_to_haters;
-    std::vector<std::string> ingredients;
+    std::vector<std::string> ingredients, universally_liked;
 
     Data(const std::string& filename)
     {
@@ -48,6 +48,18 @@ struct Data
 
                 ingr_to_haters[ingredient].push_back(client_id);
             }
+        }
+        if (filename.contains("d_difficult") || filename.contains("e_elaborate"))
+        {
+            std::erase_if(ingredients, [&](auto& ingredient ) {
+                if (ingr_to_haters.find(ingredient) == ingr_to_haters.end())
+                {
+                    universally_liked.push_back(ingredient);
+                    return true;
+                }
+                return false;
+            });
+            std::cout << "Removed " << universally_liked.size() << " ingredients that everyone likes.\n";
         }
     }
 

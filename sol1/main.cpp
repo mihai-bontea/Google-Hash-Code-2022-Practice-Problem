@@ -211,18 +211,19 @@ public:
 
     std::vector<std::string> solve()
     {
-        const int starting_depth = 3;
+        const int starting_depth = 5;
         const auto starting_states = get_states_at_depth(starting_depth);
 
-        omp_set_num_threads((int)starting_states.size());
-        #pragma omp parallel for
+        omp_set_num_threads(12);
+//        #pragma omp parallel for
+         #pragma omp parallel for schedule(dynamic, 1)
         for (int th_index = 0; th_index < starting_states.size(); ++th_index)
         {
             simulate(starting_states[th_index], starting_depth, NMAX);
         }
 
         std::cout << "Score = " << data.nr_clients - best_simulation_state.clients_lost << "\n\n";
-        std::vector<std::string> result;
+        std::vector<std::string> result(data.universally_liked.begin(), data.universally_liked.end());
 
         for (int ingredient_index = 0; ingredient_index < data.ingredients.size(); ++ingredient_index)
             if ((*best_simulation_state.is_ingredient_chosen)[ingredient_index])

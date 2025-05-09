@@ -22,7 +22,7 @@ The problem is framed as a **binary decision tree**: at each depth *i* in the tr
 
 The operation of evaluating paths in the decision tree is a great candidate for parallel processing. 8 threads are started from depth 4 in the tree, and they update a shared variable **best_simulation_state**. The simulation state of a node is mainly defined by two **bitsets**, *is_client_remaining* and *is_ingredient_chosen* which provide a memory efficient way to keep track of previous choices.
 
-The recursion depth is too much for Windows' default stack size of 1 MB, so increasing it with the help of compiler flags is a good idea.
+The recursion depth is too much for Windows' default stack size of 1 MB, so increasing it with the help of compiler flags is a good idea. The recursion depth can be significantly reduced by removing the ingredients that everyone likes(by 2863 for the biggest dataset).
 
 Finally, the simulation is tied to a 30 minute timer. If processing has not fully finished in this timeframe, it is forcefully stopped and the best solution found so far is chosen.
 
@@ -34,5 +34,5 @@ Finally, the simulation is tied to a 30 minute timer. If processing has not full
 | b_basic        | 5      |
 | c_coarse       | 5      |
 | d_difficult    | 1,716  |
-| e_elaborate    | 1,520  |
-| **Total**      | 3,248  |
+| e_elaborate    | 1,524  |
+| **Total**      | 3,252  |
