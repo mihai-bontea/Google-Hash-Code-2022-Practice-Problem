@@ -1,3 +1,4 @@
+#include <map>
 #include <array>
 #include <cmath>
 #include <bitset>
@@ -112,15 +113,15 @@ private:
         return elapsed.count() >= 30;
     }
 
-    std::vector<SimulationState> get_states_at_depth(const int max_depth)
+    std::vector<SimulationState> get_states_at_depth(const int target_depth)
     {
         // There are 2^(depth - 1) nodes(states)
         std::vector<SimulationState> states;
-        states.reserve((size_t)pow(2, max_depth - 1));
+        states.reserve((size_t)pow(2, target_depth - 1));
 
         std::function<void(SimulationState)> simulate_to_depth = [&](SimulationState simulation_state)
         {
-            if (simulation_state.depth == max_depth)
+            if (simulation_state.depth == target_depth)
             {
                 states.push_back(simulation_state);
             }
@@ -132,6 +133,11 @@ private:
         };
         simulate_to_depth(SimulationState());
         return states;
+    }
+
+    inline bool should_prune_branch(const SimulationState& simulation_state, int local_clients_lost)
+    {
+        return (simulation_state.clients_lost >= local_clients_lost);
     }
 
     void simulate(SimulationState simulation_state, int ingredient_index, int local_clients_lost)
@@ -150,22 +156,16 @@ private:
             return;
         }
 
-        bool prune = false;
         // Prune branch if already worse than the last synced best solution found so far
-        if (simulation_state.clients_lost >= local_clients_lost)
-            prune = true;
-        else
-        {
-            // Check the updated best solution found so far
-            #pragma omp critical
-            {
-                local_clients_lost = best_simulation_state.clients_lost;
-            }
-            if (simulation_state.clients_lost >= local_clients_lost)
-                prune = true;
-        }
+        if (should_prune_branch(simulation_state, local_clients_lost))
+            return;
 
-        if (prune || is_timer_expired())
+        // Check the updated best solution found so far
+        #pragma omp critical
+        {
+            local_clients_lost = best_simulation_state.clients_lost;
+        }
+        if (should_prune_branch(simulation_state, local_clients_lost) || is_timer_expired())
             return;
 
         const auto& ingredient = data.ingredients[ingredient_index];
@@ -178,17 +178,27 @@ private:
         // No one likes this ingredient, no point checking for its addition
         else if (ingr_fans_it == data.ingr_to_fans.end())
             simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
-        // More people like this ingredient than dislike it, prioritize checking its addition
-        else if (ingr_fans_it->second.size() > ingr_haters_it->second.size())
-        {
-            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
-            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
-        }
-        // More people dislike this ingredient than ike it, prioritize checking its removal
+
         else
         {
-            simulate(update_for_ingr_removal(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
-            simulate(update_for_ingr_addition(simulation_state, ingredient_index), ingredient_index + 1, local_clients_lost);
+            SimulationState state_for_addition = update_for_ingr_addition(simulation_state, ingredient_index);
+            const int clients_lost_addition = state_for_addition.clients_lost;
+
+            SimulationState state_for_removal = update_for_ingr_removal(simulation_state, ingredient_index);
+            const int clients_lost_removal = state_for_removal.clients_lost;
+
+            if (state_for_addition.clients_lost < state_for_removal.clients_lost)
+            {
+                simulate(std::move(state_for_addition), ingredient_index + 1, local_clients_lost);
+                if (clients_lost_addition != simulation_state.clients_lost)
+                    simulate(std::move(state_for_removal), ingredient_index + 1, local_clients_lost);
+            }
+            else
+            {
+                simulate(std::move(state_for_removal), ingredient_index + 1, local_clients_lost);
+                if (clients_lost_removal != simulation_state.clients_lost)
+                    simulate(std::move(state_for_addition), ingredient_index + 1, local_clients_lost);
+            }
         }
     }
 public:

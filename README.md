@@ -33,6 +33,6 @@ Finally, the simulation is tied to a 30 minute timer. If processing has not full
 | a_an_example   | 2      |
 | b_basic        | 5      |
 | c_coarse       | 5      |
-| d_difficult    | 1,707  |
-| e_elaborate    | 808    |
-| **Total**      | 2,527  |
+| d_difficult    | 1,716  |
+| e_elaborate    | 1,520  |
+| **Total**      | 3,248  |
