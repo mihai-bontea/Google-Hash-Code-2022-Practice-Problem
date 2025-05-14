@@ -24,7 +24,9 @@ The operation of evaluating paths in the decision tree is a great candidate for 
 
 The recursion depth is too much for Windows' default stack size of 1 MB, so increasing it with the help of compiler flags is a good idea. The recursion depth can be significantly reduced by removing the ingredients that everyone likes(by 2863 for the biggest dataset).
 
-Finally, the simulation is tied to a 30 minute timer. If processing has not fully finished in this timeframe, it is forcefully stopped and the best solution found so far is chosen.
+If the simulation has not fully finished within a 30 minute timeframe, it is forcefully stopped and the best solution found so far is chosen.
+
+Finally, **local search** is used on the simulation solution, which leads to a roughly 10% score improvement.
 
 ### Scoring
 
@@ -33,6 +35,6 @@ Finally, the simulation is tied to a 30 minute timer. If processing has not full
 | a_an_example   | 2      |
 | b_basic        | 5      |
 | c_coarse       | 5      |
-| d_difficult    | 1,716  |
-| e_elaborate    | 1,524  |
-| **Total**      | 3,252  |
+| d_difficult    | 1,762  |
+| e_elaborate    | 1,707  |
+| **Total**      | 3,481  |
