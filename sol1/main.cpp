@@ -202,7 +202,7 @@ private:
 
     std::vector<int> get_client_satisfaction()
     {
-        std::vector<int> client_satisfaction(data.nr_clients, 1);
+        std::vector<int> client_satisfaction(data.client_to_satisfaction_req.begin(), data.client_to_satisfaction_req.end());
         for (int ingredient_index = 0; ingredient_index < data.ingredients.size(); ++ingredient_index)
         {
             const auto &ingredient = data.ingredients[ingredient_index];
@@ -215,7 +215,8 @@ private:
                 if (ingr_haters_it != data.ingr_to_haters.end())
                     for (int client_id: ingr_haters_it->second)
                         client_satisfaction[client_id]--;
-            } else
+            }
+            else
             {
                 // Decrease satisfaction for clients who like this ingredient
                 if (ingr_fans_it != data.ingr_to_fans.end())
@@ -236,14 +237,14 @@ private:
         int gain = 0;
         if (ingr_haters_it != data.ingr_to_haters.end())
             for (int client_id: ingr_haters_it->second)
-                if (client_satisfaction[client_id] == 0)
+                if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id] - 1)
                     gain++;
 
         // Check how many clients we lose by removing the ingredient
         int loss = 0;
         if (ingr_fans_it != data.ingr_to_fans.end())
             for (int client_id: ingr_fans_it->second)
-                if (client_satisfaction[client_id] == 1)
+                if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
                     loss++;
 
         return gain - loss;
@@ -255,11 +256,10 @@ private:
         const auto ingr_fans_it = data.ingr_to_fans.find(ingredient);
         const auto ingr_haters_it = data.ingr_to_haters.find(ingredient);
 
-        // If client depended on removing this ingredient, set it to 1
+        // Increase the satisfaction of clients who dislike this ingredient
         if (ingr_haters_it != data.ingr_to_haters.end())
             for (int client_id: ingr_haters_it->second)
-                if (client_satisfaction[client_id] == 0)
-                    client_satisfaction[client_id] = 1;
+                client_satisfaction[client_id]++;
 
         // Decrease the satisfaction of clients who like this ingredient
         if (ingr_fans_it != data.ingr_to_fans.end())
@@ -277,14 +277,14 @@ private:
         int gain = 0;
         if (ingr_fans_it != data.ingr_to_fans.end())
             for (int client_id: ingr_fans_it->second)
-                if (client_satisfaction[client_id] == 0)
+                if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id] - 1)
                     gain++;
 
         // Check how many clients we lose by adding the ingredient
         int loss = 0;
         if (ingr_haters_it != data.ingr_to_haters.end())
             for (int client_id: ingr_haters_it->second)
-                if (client_satisfaction[client_id] == 1)
+                if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
                     loss++;
 
         return gain - loss;
@@ -296,13 +296,12 @@ private:
         const auto ingr_fans_it = data.ingr_to_fans.find(ingredient);
         const auto ingr_haters_it = data.ingr_to_haters.find(ingredient);
 
-        // If client depended on adding this ingredient, set it to 1
+        // Increase the satisfaction of clients who like this ingredient
         if (ingr_fans_it != data.ingr_to_fans.end())
             for (int client_id: ingr_fans_it->second)
-                if (client_satisfaction[client_id] == 0)
-                    client_satisfaction[client_id] = 1;
+                client_satisfaction[client_id]++;
 
-        // Decrease the satisfaction of clients who like this ingredient
+        // Decrease the satisfaction of clients who dislike this ingredient
         if (ingr_haters_it != data.ingr_to_haters.end())
             for (int client_id: ingr_haters_it->second)
                 client_satisfaction[client_id]--;

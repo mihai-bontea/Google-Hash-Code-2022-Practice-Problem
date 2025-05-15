@@ -12,11 +12,13 @@ struct Data
     int nr_clients;
     std::unordered_map<std::string, std::vector<int>> ingr_to_fans, ingr_to_haters;
     std::vector<std::string> ingredients, universally_liked;
+    std::vector<int> client_to_satisfaction_req;
 
     Data(const std::string& filename)
     {
         std::ifstream fin(filename);
         fin >> nr_clients;
+        client_to_satisfaction_req.resize(nr_clients);
 
         for (int client_id = 0; client_id < nr_clients; ++client_id)
         {
@@ -30,6 +32,7 @@ struct Data
             };
 
             fin >> ingr_liked;
+            client_to_satisfaction_req[client_id] = ingr_liked;
             while (ingr_liked--)
             {
                 fin >> ingredient;
@@ -40,6 +43,7 @@ struct Data
                 ingr_to_fans[ingredient].push_back(client_id);
             }
             fin >> ingr_disliked;
+            client_to_satisfaction_req[client_id] += ingr_disliked;
             while(ingr_disliked--)
             {
                 fin >> ingredient;

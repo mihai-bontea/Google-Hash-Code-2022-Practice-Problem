@@ -35,6 +35,6 @@ Finally, **local search** is used on the simulation solution, which leads to a r
 | a_an_example   | 2      |
 | b_basic        | 5      |
 | c_coarse       | 5      |
-| d_difficult    | 1,762  |
-| e_elaborate    | 1,707  |
-| **Total**      | 3,481  |
+| d_difficult    | 1,780  |
+| e_elaborate    | 1,709  |
+| **Total**      | 3,501  |
