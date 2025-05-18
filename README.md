@@ -38,3 +38,22 @@ Finally, **local search** is used on the simulation solution, which leads to a r
 | d_difficult    | 1,780  |
 | e_elaborate    | 1,709  |
 | **Total**      | 3,501  |
+
+## Solution 2
+
+### Strategy
+
+This hybrid approach builds on the previous: an initial solution is produced by the simulation(with the timer reduced from 30 minutes to only 2 minutes). Then, a **bounded priority queue** with capacity 10 is initialized from 10 runs of **simulated annealing**, followed by local search.
+
+Finally, within a 25 minute timeframe, multiple batches of simulated annealing are repeatedly performed(10 in parallel at a time). The starting states for the simulated annealing are taken from the bounded priority queue(**multistart** metaheuristic), which contains the best 10 solutions found so far. This further helps with getting out of local minima. Whenever a better solution is found, it is pushed to the priority queue, which discards the previous 10th scoring solution.
+
+### Scoring
+
+| Input File     | Score  |
+|----------------|--------|
+| a_an_example   | 2      |
+| b_basic        | 5      |
+| c_coarse       | 5      |
+| d_difficult    | 1,805  |
+| e_elaborate    | 1,725  |
+| **Total**      | 3,542  |
