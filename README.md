@@ -1,8 +1,5 @@
 # Google Hash Code 2022 Practice Problem
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/41dec048-0b7a-42a3-8ec0-7f17874d1b5" alt="Image" />
-</p>
+![Image](https://github.com/user-attachments/assets/41dec048-0b7a-42a3-8ec0-7f17874d1b54)
 
 >Everyone has their own pizza preferences. Each of your potential clients has some ingredients they like, and maybe some ingredients they dislike. Each client will come to your pizzeria if both conditions are true:
 
