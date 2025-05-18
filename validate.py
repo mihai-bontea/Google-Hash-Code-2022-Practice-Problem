@@ -1,4 +1,4 @@
-solutions = ["sol1"]
+solutions = ["sol1", "sol2"]
 input_files = ["a_an_example", "b_basic", "c_coarse", "d_difficult", "e_elaborate"]
 
 def read_input_file(filename):
@@ -58,4 +58,4 @@ for solution in solutions:
         except FileNotFoundError:
             print(f"Error: File '{full_solution_path}' not found.")
     
-    print(f"Total score = {total_score:,}")
+    print(f"Total score = {total_score:,}\n")
