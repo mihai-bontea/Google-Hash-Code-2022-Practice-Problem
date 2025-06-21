@@ -13,18 +13,17 @@ class GpuIngredientMap
 public:
     int* ingr_to_fans = nullptr;
     int* ingr_to_haters = nullptr;
+    int* client_to_satisfaction_req = nullptr;
 
     void upload(
         const std::unordered_map<std::string, std::vector<int>>& fans,
         const std::unordered_map<std::string, std::vector<int>>& haters,
-        const std::vector<std::string>& ingredients)
+        const std::vector<std::string>& ingredients,
+        const std::vector<int>& client_to_satisfaction)
     {
-                //allocateAndCopy(ingr_to_fans, fans);
-                //allocateAndCopy(ingr_to_haters, haters);
-        //        cudaMalloc(&ingr_to_fans, sizeof(int) * 10000 * 60);
-        //        cudaMalloc(&ingr_to_haters, sizeof(int) * 10000 * 60);
         allocate_and_copy_map(ingr_to_fans, fans, ingredients);
         allocate_and_copy_map(ingr_to_haters, haters, ingredients);
+        allocate_and_copy(client_to_satisfaction_req, client_to_satisfaction);
     }
 
     void allocate_and_copy_map(
@@ -61,7 +60,7 @@ public:
 
 private:
     template <typename T>
-    void allocateAndCopy(T*& device_ptr, const std::vector<T>& host_vec)
+    void allocate_and_copy(T*& device_ptr, const std::vector<T>& host_vec)
     {
         cudaMalloc(&device_ptr, sizeof(T) * host_vec.size());
         cudaMemcpy(device_ptr, host_vec.data(), sizeof(T) * host_vec.size(), cudaMemcpyHostToDevice);
@@ -71,6 +70,7 @@ private:
     {
         cudaFree(ingr_to_fans);
         cudaFree(ingr_to_haters);
+        cudaFree(client_to_satisfaction_req);
     }
 };
 

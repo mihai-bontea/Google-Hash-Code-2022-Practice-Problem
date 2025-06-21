@@ -66,7 +66,7 @@ struct Data
             std::cout << "Removed " << universally_liked.size() << " ingredients that everyone likes.\n";
         }
 
-        gpu_ingredient_map.upload(ingr_to_fans, ingr_to_haters, ingredients);
+        gpu_ingredient_map.upload(ingr_to_fans, ingr_to_haters, ingredients, client_to_satisfaction_req);
     }
 
     static void write_to_file(const std::string& filename, const std::vector<std::string>& solution)
