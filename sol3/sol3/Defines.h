@@ -1,0 +1,6 @@
+#pragma once
+
+#define NMAX 99999999
+#define MAX_CLIENTS 100000
+#define MAX_INGREDIENTS 10000
+#define MAX_INGR_RELATIONS 60
