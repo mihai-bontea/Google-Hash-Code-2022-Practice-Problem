@@ -8,13 +8,15 @@
 class IFitnessEvaluator
 {
 protected:
+    const Data& data;
     std::array<Individual, POPULATION_SIZE>& population;
 
 public:
     virtual ~IFitnessEvaluator() = default;
 
-    IFitnessEvaluator(std::array<Individual, POPULATION_SIZE>& population)
-        : population(population)
+    IFitnessEvaluator(const Data& data, std::array<Individual, POPULATION_SIZE>& population)
+    : data(data)
+    , population(population)
     {}
 
     virtual void evaluate() = 0;
@@ -37,7 +39,7 @@ __global__ static void evaluate_satisfaction_kernel(
     const int num_individuals,
     const int num_ingredients,
     const int num_clients,
-    const bool* ingr_chosen, // NUM_INDIVIDUALS x NUM_INGREDIENTS
+    const uint8_t* ingr_chosen, // NUM_INDIVIDUALS x NUM_INGREDIENTS
     const int* ingr_to_fans,   // NUM_INGREDIENTS × MAX_INGR_RELATIONS
     const int* ingr_to_haters, // NUM_INGREDIENTS × MAX_INGR_RELATIONS
     const int* client_to_satisfaction_req,
@@ -86,23 +88,47 @@ __global__ static void evaluate_satisfaction_kernel(
 
 class GpuFitnessEvaluator : public IFitnessEvaluator
 {
+private:
+    uint8_t* ingr_chosen;
+    int* fitness_scores;
+
 public:
+    GpuFitnessEvaluator(const Data& data, std::array<Individual, POPULATION_SIZE>& population)
+        : IFitnessEvaluator(data, population)
+        , ingr_chosen(nullptr)
+        , fitness_scores(nullptr)
+    {
+        cudaMalloc(&ingr_chosen, sizeof(uint8_t) * POPULATION_SIZE * MAX_INGREDIENTS);
+        cudaMalloc(&fitness_scores, sizeof(int) * POPULATION_SIZE);
+    }
+
+    ~GpuFitnessEvaluator()
+    {
+        cudaFree(ingr_chosen);
+        cudaFree(fitness_scores);
+    }
+
     void evaluate() override
     {
         const auto flattened_bitsets = get_flattened_bitsets();
+        cudaMemcpy(ingr_chosen, flattened_bitsets.data(), flattened_bitsets.size(), cudaMemcpyHostToDevice);
+           
+        // Call the kernel
+
+
     }
 private:
     
 
-    std::vector<bool> get_flattened_bitsets()
+    std::vector<uint8_t> get_flattened_bitsets()
     {
-        std::vector<bool> flat;
+        std::vector<uint8_t> flat;
         flat.reserve(POPULATION_SIZE * MAX_INGREDIENTS);
         for (const auto& individual : population)
         {
             for (size_t i = 0; i < MAX_INGREDIENTS; ++i)
             {
-                flat.push_back((*individual.genes)[i]);
+                flat.push_back((*individual.genes)[i] ? 1 : 0);
             }
         }
         return flat;

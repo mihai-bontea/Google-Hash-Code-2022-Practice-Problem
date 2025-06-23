@@ -37,13 +37,6 @@ private:
 		return ind;
 	}
 
-	void grade_fitness()
-	{
-		
-
-
-	}
-
 	void initialize_population()
 	{
 		#pragma omp parallel
@@ -68,7 +61,7 @@ public:
 		, rng(static_cast<unsigned>(std::time(nullptr)))
 		, data(data)
 		, start(std::chrono::steady_clock::now())
-		, fitness_evaluator(std::make_unique<CpuFitnessEvaluator>(population))
+		, fitness_evaluator(std::make_unique<CpuFitnessEvaluator>(data, population))
 	{
 		//population.reserve(POPULATION_SIZE);
 	}
