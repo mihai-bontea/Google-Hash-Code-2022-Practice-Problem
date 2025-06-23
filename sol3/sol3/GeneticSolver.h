@@ -8,18 +8,7 @@
 #include "Data.h"
 
 #include <omp.h>
-
-
-struct Individual
-{
-	int fitness;
-	std::unique_ptr<std::bitset<MAX_CLIENTS>> genes; // is_client_remaining
-
-	Individual()
-	: genes(std::make_unique<std::bitset<MAX_CLIENTS>>())
-	, fitness(0)
-	{}
-};
+#include "FitnessEvaluator.cuh"
 
 class GeneticSolver
 {
@@ -47,8 +36,24 @@ private:
 		return ind;
 	}
 
+	std::vector<bool> get_flattened_bitsets()
+	{
+		std::vector<bool> flat;
+		flat.reserve(POPULATION_SIZE * MAX_INGREDIENTS);
+		for (const auto& individual : population)
+		{
+			for (size_t i = 0; i < MAX_INGREDIENTS; ++i)
+			{
+				flat.push_back((*individual.genes)[i]);
+			}
+		}
+		return flat;
+	}
+
 	void grade_fitness()
 	{
+		const auto flattened_bitsets = get_flattened_bitsets();
+
 
 	}
 
@@ -90,5 +95,4 @@ public:
 
 		}
 	}
-
 };
