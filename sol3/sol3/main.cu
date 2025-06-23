@@ -18,7 +18,10 @@ int main()
             << " clients .\n";
 
         GeneticSolver solver(data);
-        solver.get_best_solution(30);
+        const auto result = solver.solve();
+
+        const auto out_filename = out_prefix + input_file.substr(0, (input_file.find('.'))) + ".out";
+        Data::write_to_file(out_filename, result);
     }
     return 0;
 }
