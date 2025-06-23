@@ -36,7 +36,6 @@ public:
 
 
 __global__ static void evaluate_satisfaction_kernel(
-    const int num_individuals,
     const int num_ingredients,
     const int num_clients,
     const uint8_t* ingr_chosen, // NUM_INDIVIDUALS x NUM_INGREDIENTS
@@ -114,7 +113,17 @@ public:
         cudaMemcpy(ingr_chosen, flattened_bitsets.data(), flattened_bitsets.size(), cudaMemcpyHostToDevice);
            
         // Call the kernel
+        const int threadsPerBlock = 256;
+        const int numBlocks = (POPULATION_SIZE + threadsPerBlock - 1) / threadsPerBlock;
 
+        evaluate_satisfaction_kernel << <numBlocks, threadsPerBlock >> > (
+            data.nr_ingredients,
+            data.nr_clients,
+            ingr_chosen,
+            data.gpu_ingredient_map.ingr_to_fans,
+            data.gpu_ingredient_map.ingr_to_haters,
+            data.gpu_ingredient_map.client_to_satisfaction_req,
+            fitness_scores);
 
     }
 private:
@@ -134,23 +143,3 @@ private:
         return flat;
     }
 };
-
-
-
-//void evalute_fitness(const std::vector<bool>& flattened_bitsets)
-//{
-//    int threads = 128;
-//    // num_individals = 100
-//    int blocks = (100 + threads - 1) / threads;
-//
-//    evaluate_satisfaction_kernel << <blocks, threads >> > (
-//        device_bitsets,
-//        device_client_satisfaction,
-//        NUM_INDIVIDUALS,
-//        NUM_INGREDIENTS,
-//        NUM_CLIENTS,
-//        device_ingr_to_fans,
-//        device_ingr_to_haters,
-//        MAX_INGR_RELATIONS
-//        );
-//}

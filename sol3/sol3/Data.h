@@ -8,7 +8,7 @@
 
 struct Data
 {
-    int nr_clients;
+    int nr_clients, nr_ingredients;
     std::unordered_map<std::string, std::vector<int>> ingr_to_fans, ingr_to_haters;
     std::vector<std::string> ingredients, universally_liked;
     std::vector<int> client_to_satisfaction_req;
@@ -65,6 +65,7 @@ struct Data
                 });
             std::cout << "Removed " << universally_liked.size() << " ingredients that everyone likes.\n";
         }
+        nr_ingredients = ingredients.size();
 
         gpu_ingredient_map.upload(ingr_to_fans, ingr_to_haters, ingredients, client_to_satisfaction_req);
     }

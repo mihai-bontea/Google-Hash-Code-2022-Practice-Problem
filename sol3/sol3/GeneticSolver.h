@@ -61,7 +61,7 @@ public:
 		, rng(static_cast<unsigned>(std::time(nullptr)))
 		, data(data)
 		, start(std::chrono::steady_clock::now())
-		, fitness_evaluator(std::make_unique<CpuFitnessEvaluator>(data, population))
+		, fitness_evaluator(std::make_unique<GpuFitnessEvaluator>(data, population))
 	{
 		//population.reserve(POPULATION_SIZE);
 	}
