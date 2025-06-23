@@ -2,6 +2,8 @@
 #include <iostream>
 #include "Data.h"
 
+#include "GeneticSolver.h"
+
 int main()
 {
     const std::string in_prefix = "../../input_files/";
@@ -14,6 +16,9 @@ int main()
         Data data(in_prefix + input_file);
         std::cout << "Successfully read " << data.ingredients.size() << " unique ingredients and " << data.nr_clients
             << " clients .\n";
+
+        GeneticSolver solver(data);
+        solver.get_best_solution(30);
     }
     return 0;
 }

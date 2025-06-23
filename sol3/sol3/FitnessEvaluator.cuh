@@ -5,84 +5,96 @@
 #include "Defines.h"
 
 
-class IFitnessEvaluator {
+class IFitnessEvaluator
+{
+protected:
+    std::array<Individual, POPULATION_SIZE>& population;
+
 public:
     virtual ~IFitnessEvaluator() = default;
 
-    virtual void evaluate(std::array<Individual, POPULATION_SIZE>& population) = 0;
+    IFitnessEvaluator(std::array<Individual, POPULATION_SIZE>& population)
+        : population(population)
+    {}
+
+    virtual void evaluate() = 0;
 };
 
 
 class CpuFitnessEvaluator : public IFitnessEvaluator
 {
 public:
-    void evaluate(std::array<Individual, POPULATION_SIZE>& population) override
+    using IFitnessEvaluator::IFitnessEvaluator;
+
+    void evaluate() override
     {
 
     }
 };
 
 
+__global__ static void evaluate_satisfaction_kernel(
+    const int num_individuals,
+    const int num_ingredients,
+    const int num_clients,
+    const bool* ingr_chosen, // NUM_INDIVIDUALS x NUM_INGREDIENTS
+    const int* ingr_to_fans,   // NUM_INGREDIENTS × MAX_INGR_RELATIONS
+    const int* ingr_to_haters, // NUM_INGREDIENTS × MAX_INGR_RELATIONS
+    const int* client_to_satisfaction_req,
+    int* fitness_scores) // Output: NUM_INDIVIDUALS)
+{
+    //int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    //if (tid >= num_individuals) return;
+
+    //const uint32_t* bitset = &bitsets[tid]; // points to bit pattern of this individual
+    //int* output = &client_satisfaction[tid * num_clients]; // each thread writes to its own output
+
+    //// Init satisfaction to 0
+    //for (int i = 0; i < num_clients; ++i)
+    //    output[i] = 0;
+
+    //for (int ingredient_index = 0; ingredient_index < num_ingredients; ++ingredient_index)
+    //{
+    //    bool chosen = (bitset[ingredient_index / 32] >> (ingredient_index % 32)) & 1;
+
+    //    const int* fans = &ingr_to_fans[ingredient_index * MAX_INGR_RELATIONS];
+    //    const int* haters = &ingr_to_haters[ingredient_index * MAX_INGR_RELATIONS];
+
+    //    int fan_count = fans[0];
+    //    int hater_count = haters[0];
+
+    //    if (chosen)
+    //    {
+    //        // Penalize haters
+    //        for (int i = 0; i < hater_count; ++i) {
+    //            int client_id = haters[i + 1];
+    //            if (client_id >= 0 && client_id < num_clients)
+    //                output[client_id]--;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        // Penalize fans
+    //        for (int i = 0; i < fan_count; ++i) {
+    //            int client_id = fans[i + 1];
+    //            if (client_id >= 0 && client_id < num_clients)
+    //                output[client_id]--;
+    //        }
+    //    }
+    //}
+}
+
 class GpuFitnessEvaluator : public IFitnessEvaluator
 {
 public:
-    void evaluate(std::array<Individual, POPULATION_SIZE>& population) override
+    void evaluate() override
     {
-        const auto flattened_bitsets = get_flattened_bitsets(population);
+        const auto flattened_bitsets = get_flattened_bitsets();
     }
 private:
-    __global__ static void evaluate_satisfaction_kernel(
-        const int num_individuals,
-        const int num_ingredients,
-        const int num_clients,
-        const bool* ingr_chosen, // NUM_INDIVIDUALS x NUM_INGREDIENTS
-        const int* ingr_to_fans,   // NUM_INGREDIENTS × MAX_INGR_RELATIONS
-        const int* ingr_to_haters, // NUM_INGREDIENTS × MAX_INGR_RELATIONS
-        const int* client_to_satisfaction_req,
-        int* fitness_scores) // Output: NUM_INDIVIDUALS)
-    {
-        int tid = blockIdx.x * blockDim.x + threadIdx.x;
-        if (tid >= num_individuals) return;
+    
 
-        const uint32_t* bitset = &bitsets[tid]; // points to bit pattern of this individual
-        int* output = &client_satisfaction[tid * num_clients]; // each thread writes to its own output
-
-        // Init satisfaction to 0
-        for (int i = 0; i < num_clients; ++i)
-            output[i] = 0;
-
-        for (int ingredient_index = 0; ingredient_index < num_ingredients; ++ingredient_index)
-        {
-            bool chosen = (bitset[ingredient_index / 32] >> (ingredient_index % 32)) & 1;
-
-            const int* fans = &ingr_to_fans[ingredient_index * MAX_INGR_RELATIONS];
-            const int* haters = &ingr_to_haters[ingredient_index * MAX_INGR_RELATIONS];
-
-            int fan_count = fans[0];
-            int hater_count = haters[0];
-
-            if (chosen)
-            {
-                // Penalize haters
-                for (int i = 0; i < hater_count; ++i) {
-                    int client_id = haters[i + 1];
-                    if (client_id >= 0 && client_id < num_clients)
-                        output[client_id]--;
-                }
-            }
-            else
-            {
-                // Penalize fans
-                for (int i = 0; i < fan_count; ++i) {
-                    int client_id = fans[i + 1];
-                    if (client_id >= 0 && client_id < num_clients)
-                        output[client_id]--;
-                }
-            }
-        }
-    }
-
-    static std::vector<bool> get_flattened_bitsets(std::array<Individual, POPULATION_SIZE>& population)
+    std::vector<bool> get_flattened_bitsets()
     {
         std::vector<bool> flat;
         flat.reserve(POPULATION_SIZE * MAX_INGREDIENTS);

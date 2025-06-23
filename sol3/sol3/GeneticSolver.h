@@ -20,6 +20,7 @@ private:
 
 	//std::vector<Individual> population;
 	std::array<Individual, POPULATION_SIZE> population;
+	std::unique_ptr<IFitnessEvaluator> fitness_evaluator;
 
 	bool is_timer_expired()
 	{
@@ -36,23 +37,9 @@ private:
 		return ind;
 	}
 
-	std::vector<bool> get_flattened_bitsets()
-	{
-		std::vector<bool> flat;
-		flat.reserve(POPULATION_SIZE * MAX_INGREDIENTS);
-		for (const auto& individual : population)
-		{
-			for (size_t i = 0; i < MAX_INGREDIENTS; ++i)
-			{
-				flat.push_back((*individual.genes)[i]);
-			}
-		}
-		return flat;
-	}
-
 	void grade_fitness()
 	{
-		const auto flattened_bitsets = get_flattened_bitsets();
+		
 
 
 	}
@@ -81,6 +68,7 @@ public:
 		, rng(static_cast<unsigned>(std::time(nullptr)))
 		, data(data)
 		, start(std::chrono::steady_clock::now())
+		, fitness_evaluator(std::make_unique<CpuFitnessEvaluator>(population))
 	{
 		//population.reserve(POPULATION_SIZE);
 	}
@@ -92,7 +80,8 @@ public:
 		size_t generation = 0;
 		while (!is_timer_expired())
 		{
-
+			// Evaluate the fitness of the current generation
+			fitness_evaluator.get()->evaluate();
 		}
 	}
 };
