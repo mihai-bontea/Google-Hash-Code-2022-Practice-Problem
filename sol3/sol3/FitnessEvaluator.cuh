@@ -42,12 +42,13 @@ __global__ static void evaluate_satisfaction_kernel(
     const int* ingr_to_fans,   // NUM_INGREDIENTS × MAX_INGR_RELATIONS
     const int* ingr_to_haters, // NUM_INGREDIENTS × MAX_INGR_RELATIONS
     const int* client_to_satisfaction_req,
+    int* client_satisfaction,
     int* fitness_scores) // Output: NUM_INDIVIDUALS)
 {
-    //int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    //if (tid >= num_individuals) return;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= POPULATION_SIZE) return;
 
-    //const uint32_t* bitset = &bitsets[tid]; // points to bit pattern of this individual
+    const uint8_t* ingr_chosen_ = &ingr_chosen[tid]; // ???
     //int* output = &client_satisfaction[tid * num_clients]; // each thread writes to its own output
 
     //// Init satisfaction to 0
@@ -90,15 +91,32 @@ class GpuFitnessEvaluator : public IFitnessEvaluator
 private:
     uint8_t* ingr_chosen;
     int* fitness_scores;
+    int* client_satisfaction;
+
+    std::vector<uint8_t> get_flattened_bitsets()
+    {
+        std::vector<uint8_t> flat;
+        flat.reserve(POPULATION_SIZE * MAX_INGREDIENTS);
+        for (const auto& individual : population)
+        {
+            for (size_t i = 0; i < MAX_INGREDIENTS; ++i)
+            {
+                flat.push_back((*individual.genes)[i] ? 1 : 0);
+            }
+        }
+        return flat;
+    }
 
 public:
     GpuFitnessEvaluator(const Data& data, std::array<Individual, POPULATION_SIZE>& population)
         : IFitnessEvaluator(data, population)
         , ingr_chosen(nullptr)
         , fitness_scores(nullptr)
+        , client_satisfaction(nullptr)
     {
         cudaMalloc(&ingr_chosen, sizeof(uint8_t) * POPULATION_SIZE * MAX_INGREDIENTS);
         cudaMalloc(&fitness_scores, sizeof(int) * POPULATION_SIZE);
+        cudaMalloc(&client_satisfaction, sizeof(int) * POPULATION_SIZE * MAX_CLIENTS);
     }
 
     ~GpuFitnessEvaluator()
@@ -123,23 +141,7 @@ public:
             data.gpu_ingredient_map.ingr_to_fans,
             data.gpu_ingredient_map.ingr_to_haters,
             data.gpu_ingredient_map.client_to_satisfaction_req,
+            client_satisfaction,
             fitness_scores);
-
-    }
-private:
-    
-
-    std::vector<uint8_t> get_flattened_bitsets()
-    {
-        std::vector<uint8_t> flat;
-        flat.reserve(POPULATION_SIZE * MAX_INGREDIENTS);
-        for (const auto& individual : population)
-        {
-            for (size_t i = 0; i < MAX_INGREDIENTS; ++i)
-            {
-                flat.push_back((*individual.genes)[i] ? 1 : 0);
-            }
-        }
-        return flat;
     }
 };
