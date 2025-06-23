@@ -1,5 +1,6 @@
 #pragma once
 
+#include <omp.h>
 #include <cuda_runtime.h>
 #include "Individual.h"
 #include "Defines.h"
@@ -25,12 +26,57 @@ public:
 
 class CpuFitnessEvaluator : public IFitnessEvaluator
 {
+private:
+    int get_clients_lost(const Individual& individual) const
+    {
+        int clients_lost = 0;
+
+        std::vector<int> client_satisfaction(data.client_to_satisfaction_req.begin(), data.client_to_satisfaction_req.end());
+        for (int ingredient_index = 0; ingredient_index < data.ingredients.size(); ++ingredient_index)
+        {
+            const auto& ingredient = data.ingredients[ingredient_index];
+            const auto ingr_fans_it = data.ingr_to_fans.find(ingredient);
+            const auto ingr_haters_it = data.ingr_to_haters.find(ingredient);
+
+            if ((*individual.genes)[ingredient_index])
+            {
+                // Decrease satisfaction for clients who dislike this ingredient
+                if (ingr_haters_it != data.ingr_to_haters.end())
+                    for (int client_id : ingr_haters_it->second)
+                    {
+                        if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
+                            clients_lost++;
+                        client_satisfaction[client_id]--;
+                    }
+            }
+            else
+            {
+                // Decrease satisfaction for clients who like this ingredient
+                if (ingr_fans_it != data.ingr_to_fans.end())
+                    for (int client_id : ingr_fans_it->second)
+                    {
+                        if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
+                            clients_lost++;
+                        client_satisfaction[client_id]--;
+                    }
+            }
+        }
+        return clients_lost;
+    }
+
 public:
     using IFitnessEvaluator::IFitnessEvaluator;
 
     void evaluate() override
     {
+        omp_set_num_threads(12);
 
+        #pragma omp parallel
+        for (int individual_index = 0; individual_index < POPULATION_SIZE; ++individual_index)
+        {
+            const int clients_remaining = data.nr_clients - get_clients_lost(population[individual_index]);
+            population[individual_index].fitness = clients_remaining;
+        }
     }
 };
 
