@@ -2,9 +2,9 @@
 
 #include <omp.h>
 #include <cuda_runtime.h>
-#include "Individual.h"
-#include "Defines.h"
 
+#include "Defines.h"
+#include "Individual.h"
 
 class IFitnessEvaluator
 {
@@ -31,7 +31,6 @@ private:
     {
         int clients_lost = 0;
 
-        //std::vector<int> client_satisfaction(data.client_to_satisfaction_req.begin(), data.client_to_satisfaction_req.end());
         std::bitset<MAX_CLIENTS> is_client_remaining;
         is_client_remaining.set();
 
@@ -48,10 +47,8 @@ private:
                 if (ingr_haters_it != data.ingr_to_haters.end())
                     for (int client_id : ingr_haters_it->second)
                     {
-                        //if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
                         if (is_client_remaining[client_id])
                             clients_lost++;
-                        //client_satisfaction[client_id]--;
                         is_client_remaining[client_id] = false;
                     }
             }
@@ -61,10 +58,8 @@ private:
                 if (ingr_fans_it != data.ingr_to_fans.end())
                     for (int client_id : ingr_fans_it->second)
                     {
-                        //if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
                         if (is_client_remaining[client_id])
                             clients_lost++;
-                        //client_satisfaction[client_id]--;
                         is_client_remaining[client_id] = false;
                     }
             }
