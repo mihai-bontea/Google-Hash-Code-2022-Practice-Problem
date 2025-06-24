@@ -1,23 +1,16 @@
 #pragma once
 
+#include <omp.h>
 #include <array>
 #include <memory>
 #include <bitset>
 #include <random>
 #include <chrono>
 #include <unordered_set>
+
 #include "Data.h"
-
-#include <omp.h>
 #include "FitnessEvaluator.cuh"
-//#include "BoundedPriorityQueue.h"
 #include "SimulatedAnnealingParallel.h"
-
-//struct MinHeapComp {
-//	bool operator()(const Individual& lhs, const Individual& rhs) const {
-//		return lhs.fitness > rhs.fitness;
-//	}
-//};
 
 class GeneticSolver
 {
@@ -28,7 +21,6 @@ private:
 	std::uniform_int_distribution<int> individual_dist;
 	const std::chrono::steady_clock::time_point start;
 
-	//std::vector<Individual> population;
 	std::array<Individual, POPULATION_SIZE> population;
 	std::unique_ptr<IFitnessEvaluator> fitness_evaluator;
 
