@@ -31,22 +31,28 @@ private:
     {
         int clients_lost = 0;
 
-        std::vector<int> client_satisfaction(data.client_to_satisfaction_req.begin(), data.client_to_satisfaction_req.end());
-        for (int ingredient_index = 0; ingredient_index < data.ingredients.size(); ++ingredient_index)
+        //std::vector<int> client_satisfaction(data.client_to_satisfaction_req.begin(), data.client_to_satisfaction_req.end());
+        std::bitset<MAX_CLIENTS> is_client_remaining;
+        is_client_remaining.set();
+
+        const auto& genes = *individual.genes;
+        for (int ingredient_index = 0; ingredient_index < data.nr_ingredients; ++ingredient_index)
         {
             const auto& ingredient = data.ingredients[ingredient_index];
             const auto ingr_fans_it = data.ingr_to_fans.find(ingredient);
             const auto ingr_haters_it = data.ingr_to_haters.find(ingredient);
 
-            if ((*individual.genes)[ingredient_index])
+            if (genes[ingredient_index])
             {
                 // Decrease satisfaction for clients who dislike this ingredient
                 if (ingr_haters_it != data.ingr_to_haters.end())
                     for (int client_id : ingr_haters_it->second)
                     {
-                        if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
+                        //if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
+                        if (is_client_remaining[client_id])
                             clients_lost++;
-                        client_satisfaction[client_id]--;
+                        //client_satisfaction[client_id]--;
+                        is_client_remaining[client_id] = false;
                     }
             }
             else
@@ -55,9 +61,11 @@ private:
                 if (ingr_fans_it != data.ingr_to_fans.end())
                     for (int client_id : ingr_fans_it->second)
                     {
-                        if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
+                        //if (client_satisfaction[client_id] == data.client_to_satisfaction_req[client_id])
+                        if (is_client_remaining[client_id])
                             clients_lost++;
-                        client_satisfaction[client_id]--;
+                        //client_satisfaction[client_id]--;
+                        is_client_remaining[client_id] = false;
                     }
             }
         }
@@ -69,9 +77,7 @@ public:
 
     void evaluate() override
     {
-        omp_set_num_threads(12);
-
-        #pragma omp parallel
+        #pragma omp parallel for num_threads(12)
         for (int individual_index = 0; individual_index < POPULATION_SIZE; ++individual_index)
         {
             const int clients_remaining = data.nr_clients - get_clients_lost(population[individual_index]);
@@ -95,41 +101,6 @@ __global__ static void evaluate_satisfaction_kernel(
     if (tid >= POPULATION_SIZE) return;
 
     const uint8_t* ingr_chosen_ = &ingr_chosen[tid]; // ???
-    //int* output = &client_satisfaction[tid * num_clients]; // each thread writes to its own output
-
-    //// Init satisfaction to 0
-    //for (int i = 0; i < num_clients; ++i)
-    //    output[i] = 0;
-
-    //for (int ingredient_index = 0; ingredient_index < num_ingredients; ++ingredient_index)
-    //{
-    //    bool chosen = (bitset[ingredient_index / 32] >> (ingredient_index % 32)) & 1;
-
-    //    const int* fans = &ingr_to_fans[ingredient_index * MAX_INGR_RELATIONS];
-    //    const int* haters = &ingr_to_haters[ingredient_index * MAX_INGR_RELATIONS];
-
-    //    int fan_count = fans[0];
-    //    int hater_count = haters[0];
-
-    //    if (chosen)
-    //    {
-    //        // Penalize haters
-    //        for (int i = 0; i < hater_count; ++i) {
-    //            int client_id = haters[i + 1];
-    //            if (client_id >= 0 && client_id < num_clients)
-    //                output[client_id]--;
-    //        }
-    //    }
-    //    else
-    //    {
-    //        // Penalize fans
-    //        for (int i = 0; i < fan_count; ++i) {
-    //            int client_id = fans[i + 1];
-    //            if (client_id >= 0 && client_id < num_clients)
-    //                output[client_id]--;
-    //        }
-    //    }
-    //}
 }
 
 class GpuFitnessEvaluator : public IFitnessEvaluator

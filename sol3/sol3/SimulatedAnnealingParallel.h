@@ -229,6 +229,14 @@ public:
 
     Individual attempt_improvement(Individual starting_state)
     {
+        auto simulation_state = simulated_annealing(starting_state);
+        local_search(simulation_state);
+
+        return simulation_state;
+    }
+
+    Individual attempt_improvement_parallel(Individual starting_state)
+    {
         // Obtain some starting states
         BoundedPriorityQueue<Individual, MinHeapComp> top_n_queue(NR_THREADS);
 
