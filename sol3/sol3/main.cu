@@ -13,9 +13,6 @@ int main()
 
     for (const auto& input_file : input_files)
     {
-        if (input_file != "e_elaborate.in")
-            continue;
-
         Data data(in_prefix + input_file);
         std::cout << "Successfully read " << data.ingredients.size() << " unique ingredients and " << data.nr_clients
             << " clients .\n";
