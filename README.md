@@ -63,7 +63,7 @@ Finally, within a 25 minute timeframe, multiple batches of simulated annealing a
 
 ### Strategy
 
-A genetic algorithm with a combination of elitism (keeps top 10% individuals unchanged) and tournament selection with a population size of 150 is used. Every 1500 generations, simulated annealing with local search(capped to 1 minute) is applied to a random 10% subset of the population. After 25 minues of the genetic simulation, 5 minutes of simulated annealing are applied to the best individual found so far.
+A genetic algorithm with a combination of **elitism** (keeps top 10% individuals unchanged) and **tournament selection** with a population size of 150 is used. Every 1500 generations, simulated annealing with local search(capped to 1 minute) is applied to a random 10% subset of the population. After 25 minues of the genetic simulation, 5 minutes of simulated annealing are applied to the best individual found so far.
 
 ### Scoring
 
