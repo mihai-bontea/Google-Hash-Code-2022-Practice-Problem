@@ -1,4 +1,4 @@
-solutions = ["sol1", "sol2"]
+solutions = ["sol1", "sol2", "sol3"]
 input_files = ["a_an_example", "b_basic", "c_coarse", "d_difficult", "e_elaborate"]
 
 def read_input_file(filename):
