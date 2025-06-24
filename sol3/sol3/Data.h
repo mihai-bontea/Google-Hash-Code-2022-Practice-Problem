@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include <fstream>
-#include <unordered_map>
 #include <iostream>
+#include <unordered_map>
 
 #include "GpuIngredientMap.cuh"
 
